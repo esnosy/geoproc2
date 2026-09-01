@@ -117,7 +117,9 @@ Indexed_Mesh read_ply(const char *filepath) {
         p.value_type = str_to_ply_type.at(token);
       }
       ifs >> p.name;
-      elements.back().props.push_back(p);
+      auto &e = elements.back();
+      p.values.reserve(e.count);
+      e.props.push_back(p);
     } else if (token == "end_header") {
       break;
     }
