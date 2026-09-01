@@ -7,7 +7,9 @@
 
 #include <cassert>
 #include <cstdint>
+#include <cstdlib>
 
+#include "../../file_buf.hpp"
 #include "ply_io.hpp"
 
 enum class PLY_Type { Char, UChar, Short, UShort, Int, UInt, Float, Double };
@@ -140,6 +142,39 @@ Indexed_Mesh read_ply(const char *filepath) {
         }
       }
     }
+  } else if (format == "ascii") {
+    auto pos1 = ifs.tellg();
+    ifs.seekg(0, std::ios_base::end);
+    auto pos2 = ifs.tellg();
+    auto buf_size = pos2 - pos1;
+    ifs.seekg(pos1, std::ios_base::beg);
+    char *buf = reinterpret_cast<char *>(malloc(buf_size));
+    ifs.read(buf, buf_size);
+    File_Buf file_buf(buf, buf_size);
+    for (auto &e : elements) {
+      for (size_t i = 0; i < e.count; i++) {
+        for (auto &p : e.props) {
+          if (p.type == Property::Type::List) {
+            size_t list_size;
+            file_buf.skip_spaces();
+            file_buf.parse_token_as_number(list_size);
+            auto &values = p.values.emplace_back();
+            values.reserve(list_size);
+            for (size_t j = 0; j < list_size; j++) {
+              file_buf.skip_spaces();
+              file_buf.parse_token_as_number(values.emplace_back());
+            }
+          } else {
+            double value;
+            file_buf.skip_spaces();
+            file_buf.parse_token_as_number(value);
+            p.values.push_back({value});
+          }
+        }
+      }
+    }
+
+    free(buf);
   }
 
   std::vector<float> xs, ys, zs;
