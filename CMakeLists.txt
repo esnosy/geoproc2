@@ -20,7 +20,7 @@ FetchContent_MakeAvailable(fmt)
 add_subdirectory(libs)
 
 add_executable(read_stl apps/read_stl.cpp)
-target_link_libraries(read_stl PUBLIC off_io stl_io)
+target_link_libraries(read_stl PUBLIC off_io stl_io ply_io)
 
 add_executable(read_off apps/read_off.cpp)
 target_link_libraries(read_off PUBLIC off_io stl_io)
