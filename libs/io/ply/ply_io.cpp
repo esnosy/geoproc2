@@ -1,6 +1,5 @@
 #include <fstream>
 #include <iostream>
-#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
@@ -90,46 +89,35 @@ double read_value(std::ifstream &ifs, PLY_Type value_type) {
 
 Indexed_Mesh read_ply(const char *filepath) {
   std::ifstream ifs(filepath, std::ios_base::binary);
-  std::string line;
-  std::string header;
-  // strip comments from header
-  while (std::getline(ifs, line) && !starts_with(line.c_str(), "end_header")) {
-    if (starts_with(line.c_str(), "comment")) {
-      continue;
-    }
-    header += line + '\n';
-  }
-  assert(ifs);
-  std::stringstream header_ss(header);
-  std::string token;
-  header_ss >> token; // expecting "ply"
-  std::string format;
-  header_ss >> token; // expecting "format"
-  header_ss >> format;
-  header_ss >> token; // expecting format version
 
+  std::string token;
+  std::string format;
   std::vector<Element> elements;
 
-  while (header_ss >> token) {
-    if (token == "element") {
+  while (ifs >> token) {
+    if (token == "format") {
+      ifs >> format;
+    } else if (token == "element") {
       Element e;
-      header_ss >> e.name >> e.count;
+      ifs >> e.name >> e.count;
       elements.push_back(e);
     } else if (token == "property") {
       Property p;
-      header_ss >> token;
+      ifs >> token;
       if (token == "list") {
         p.type = Property::Type::List;
-        header_ss >> token; // list count type
+        ifs >> token; // list count type
         p.list_count_type = str_to_ply_type.at(token);
-        header_ss >> token; // list value type
+        ifs >> token; // list value type
         p.value_type = str_to_ply_type.at(token);
       } else {
         p.type = Property::Type::Value;
         p.value_type = str_to_ply_type.at(token);
       }
-      header_ss >> p.name;
+      ifs >> p.name;
       elements.back().props.push_back(p);
+    } else if (token == "end_header") {
+      break;
     }
   }
 
