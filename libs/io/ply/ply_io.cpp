@@ -9,6 +9,8 @@
 #include <cstdint>
 #include <cstdlib>
 
+#include <fmt/os.h>
+
 #include "../../file_buf.hpp"
 #include "ply_io.hpp"
 
@@ -247,5 +249,29 @@ void write_ply_binary(const Indexed_Mesh &mesh, const char *filepath) {
       uint32_t vi_uint = (uint32_t)vi;
       ofs.write(reinterpret_cast<char *>(&vi_uint), sizeof uint32_t);
     }
+  }
+}
+
+void write_ply_ascii(const Indexed_Mesh &mesh, const char *filepath) {
+  auto out = fmt::output_file(filepath);
+  out.print("ply\n"
+            "format ascii 1.0\n"
+            "element vertex {}\n"
+            "property float x\n"
+            "property float y\n"
+            "property float z\n"
+            "element face {}\n"
+            "property list uchar uint vertex_indices\n"
+            "end_header\n",
+            mesh.vertices.size(), mesh.faces.size());
+  for (auto &v : mesh.vertices) {
+    out.print("{} {} {}\n", v.x, v.y, v.z);
+  }
+  for (auto &f : mesh.faces) {
+    out.print("{}", f.size());
+    for (auto vi : f) {
+      out.print(" {}", vi);
+    }
+    out.print("\n");
   }
 }
