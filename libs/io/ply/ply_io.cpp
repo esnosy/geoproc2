@@ -222,3 +222,30 @@ Indexed_Mesh read_ply(const char *filepath) {
   }
   return result;
 }
+
+void write_ply_binary(const Indexed_Mesh &mesh, const char *filepath) {
+  std::ofstream ofs(filepath, std::ios_base::binary | std::ios_base::trunc);
+  ofs << "ply\n"
+         "format binary_little_endian 1.0\n"
+         "element vertex "
+      << mesh.vertices.size()
+      << "\n"
+         "property float x\n"
+         "property float y\n"
+         "property float z\n"
+         "element face "
+      << mesh.faces.size()
+      << "\n"
+         "property list uchar uint vertex_indices\n"
+         "end_header\n";
+  ofs.write(reinterpret_cast<const char *>(mesh.vertices.data()),
+            mesh.vertices.size() * sizeof Vec3);
+  for (const auto &f : mesh.faces) {
+    uint8_t num_verts = (uint8_t)f.size();
+    ofs.write(reinterpret_cast<char *>(&num_verts), sizeof uint8_t);
+    for (auto vi : f) {
+      uint32_t vi_uint = (uint32_t)vi;
+      ofs.write(reinterpret_cast<char *>(&vi_uint), sizeof uint32_t);
+    }
+  }
+}
