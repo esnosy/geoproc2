@@ -1,0 +1,1 @@
+add_library(ply_io STATIC ply_io.cpp)
