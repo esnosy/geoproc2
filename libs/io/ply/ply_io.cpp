@@ -119,6 +119,11 @@ Indexed_Mesh read_ply(const char *filepath) {
         p.value_type = str_to_ply_type.at(token);
       }
       ifs >> p.name;
+      if (elements.empty()) {
+        constexpr const char *err = "PLY IO ERROR: Expected element before props";
+        std::cerr << err << std::endl;
+        throw std::runtime_error(err);
+      }
       auto &e = elements.back();
       p.values.reserve(e.count);
       e.props.push_back(p);
