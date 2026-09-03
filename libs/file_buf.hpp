@@ -34,13 +34,13 @@ struct File_Buf {
     offset = answer.ptr - buf;
   }
   bool compare_token(const char *string) {
-    while (offset < size && *string) {
-      if (buf[offset] != *string) {
-        skip_token();
+    size_t local_offset = offset;
+    while (local_offset < size && *string) {
+      if (buf[local_offset] != *string) {
         return false;
       }
       string++;
-      offset++;
+      local_offset++;
     }
     return *string == 0;
   }

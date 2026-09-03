@@ -49,6 +49,8 @@ std::vector<Triangle> read_stl(const char *filepath) {
     while (file_buf.offset < file_buf.size) {
       file_buf.skip_spaces();
       if (file_buf.compare_token("facet")) {
+        file_buf.skip_token(); // skip "facet"
+
         Vec3 normal;
         Triangle t;
         file_buf.skip_spaces();
@@ -81,6 +83,8 @@ std::vector<Triangle> read_stl(const char *filepath) {
         file_buf.skip_token();
 
         tris.push_back(t);
+      } else {
+        file_buf.skip_token();
       }
     }
     free(buf);
