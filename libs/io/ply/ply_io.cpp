@@ -134,7 +134,6 @@ Indexed_Mesh read_ply(const char *filepath) {
 
   if (format == "binary_little_endian") {
     for (auto &e : elements) {
-      assert(ifs);
       for (size_t i = 0; i < e.count; i++) {
         for (auto &p : e.props) {
           if (p.type == Property::Type::List) {
