@@ -15,6 +15,10 @@ struct Vec3 {
     throw std::out_of_range("Index out of range");
   }
 
+  float dot(const Vec3 &other) const {
+    return x * other.x + y * other.y + z * other.z;
+  }
+
   bool operator==(const Vec3 &other) const {
     return x == other.x && y == other.y && z == other.z;
   }
