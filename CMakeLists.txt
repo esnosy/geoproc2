@@ -27,3 +27,6 @@ target_link_libraries(read_off PUBLIC off_io stl_io)
 
 add_executable(read_ply apps/read_ply.cpp)
 target_link_libraries(read_ply PUBLIC ply_io stl_io off_io)
+
+add_executable(read_obj apps/read_obj.cpp)
+target_link_libraries(read_obj PUBLIC obj_io stl_io)

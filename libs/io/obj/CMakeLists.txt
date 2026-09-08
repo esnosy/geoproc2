@@ -1,0 +1,1 @@
+add_library(obj_io STATIC obj_io.cpp)
