@@ -3,6 +3,7 @@
 #include <string>
 
 #include "../../fast_float.h"
+#include <fmt/os.h>
 
 #include "obj_io.hpp"
 
@@ -47,4 +48,25 @@ std::vector<Indexed_Mesh> read_obj(const char *filepath) {
     }
   }
   return meshes;
+}
+
+void write_obj(const std::vector<Indexed_Mesh> &meshes, const char *filepath) {
+  auto out = fmt::output_file(filepath);
+  size_t vertex_offset = 1;
+  size_t object_index = 0;
+  for (const auto &m : meshes) {
+    out.print("o mesh_{}\n", object_index);
+    object_index++;
+    for (const auto &v : m.vertices) {
+      out.print("v {} {} {}\n", v.x, v.y, v.z);
+    }
+    for (const auto &f : m.faces) {
+      out.print("f");
+      for (size_t vi : f) {
+        out.print(" {}", vi + vertex_offset);
+      }
+      out.print("\n");
+    }
+    vertex_offset += m.vertices.size();
+  }
 }

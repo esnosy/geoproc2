@@ -20,4 +20,6 @@ int main(int argc, char *argv[]) {
   }
   auto tris = mesh.triangulate().to_tris();
   write_stl_binary(tris, "obj_to_stl.stl");
+
+  write_obj(meshes, "obj_to_obj.obj");
 }
