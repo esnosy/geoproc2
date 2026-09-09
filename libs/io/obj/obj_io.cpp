@@ -5,7 +5,11 @@
 #include "../../fast_float.h"
 #include <fmt/os.h>
 
+#include "../../mat3x3.hpp"
 #include "obj_io.hpp"
+
+Mat3x3 import_mat = {{{1, 0, 0}, {0, 0, -1}, {0, 1, 0}}};
+Mat3x3 export_mat = import_mat.transposed();
 
 std::vector<Indexed_Mesh> read_obj(const char *filepath) {
   std::vector<Indexed_Mesh> meshes;
@@ -36,6 +40,7 @@ std::vector<Indexed_Mesh> read_obj(const char *filepath) {
       line_ss >> token;
       fast_float::from_chars(token.data(), token.data() + token.size(),
                              vertex.z);
+      vertex = import_mat * vertex;
       meshes.back().vertices.push_back(vertex);
     } else if (token == "f") {
       std::vector<size_t> face;
@@ -57,7 +62,8 @@ void write_obj(const std::vector<Indexed_Mesh> &meshes, const char *filepath) {
   for (const auto &m : meshes) {
     out.print("o mesh_{}\n", object_index);
     object_index++;
-    for (const auto &v : m.vertices) {
+    for (Vec3 v : m.vertices) {
+      v = export_mat * v;
       out.print("v {} {} {}\n", v.x, v.y, v.z);
     }
     for (const auto &f : m.faces) {

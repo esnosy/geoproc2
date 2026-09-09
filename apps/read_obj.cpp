@@ -14,10 +14,6 @@ int main(int argc, char *argv[]) {
   const char *filepath = argv[1];
   auto meshes = read_obj(filepath);
   auto mesh = join_meshes(meshes);
-  Mat3x3 mat = {{{1, 0, 0}, {0, 0, -1}, {0, 1, 0}}};
-  for (Vec3 &v : mesh.vertices) {
-    v = mat * v;
-  }
   auto tris = mesh.triangulate().to_tris();
   write_stl_binary(tris, "obj_to_stl.stl");
 

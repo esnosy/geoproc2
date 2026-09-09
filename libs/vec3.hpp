@@ -15,6 +15,16 @@ struct Vec3 {
     throw std::out_of_range("Index out of range");
   }
 
+  float operator[](size_t i) const {
+    if (i == 0)
+      return x;
+    if (i == 1)
+      return y;
+    if (i == 2)
+      return z;
+    throw std::out_of_range("Index out of range");
+  }
+
   float dot(const Vec3 &other) const {
     return x * other.x + y * other.y + z * other.z;
   }
