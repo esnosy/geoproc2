@@ -18,3 +18,53 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(fmt)
 
 add_subdirectory(libs)
+
+set(SDL_SHARED OFF)
+set(SDL_STATIC ON)
+FetchContent_Declare(
+	sdl
+	GIT_REPOSITORY
+	https://github.com/libsdl-org/SDL.git
+	GIT_TAG
+	release-3.4.18
+)
+FetchContent_MakeAvailable(sdl)
+
+FetchContent_Declare(
+	glm
+	GIT_REPOSITORY
+	https://github.com/g-truc/glm.git
+	GIT_TAG
+	1.0.3
+)
+FetchContent_MakeAvailable(glm)
+
+add_executable(viewer apps/viewer.cpp)
+target_link_libraries(viewer PUBLIC SDL3-static stl_io glm)
+
+if(APPLE)
+	add_custom_command(
+		TARGET viewer
+		POST_BUILD
+		COMMAND shadercross ${CMAKE_CURRENT_SOURCE_DIR}/apps/shader.vert.hlsl -o
+			$<TARGET_FILE_DIR:viewer>/shader.vert.msl
+		COMMAND shadercross ${CMAKE_CURRENT_SOURCE_DIR}/apps/shader.frag.hlsl -o
+			$<TARGET_FILE_DIR:viewer>/shader.frag.msl
+	)
+else()
+	add_custom_command(
+		TARGET viewer
+		POST_BUILD
+		COMMAND shadercross ${CMAKE_CURRENT_SOURCE_DIR}/apps/shader.vert.hlsl -o
+			$<TARGET_FILE_DIR:viewer>/shader.vert.spv
+		COMMAND shadercross ${CMAKE_CURRENT_SOURCE_DIR}/apps/shader.frag.hlsl -o
+			$<TARGET_FILE_DIR:viewer>/shader.frag.spv
+	)
+endif()
+
+add_custom_command(
+	TARGET viewer
+	POST_BUILD
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different
+		${CMAKE_CURRENT_SOURCE_DIR}/monkey.stl $<TARGET_FILE_DIR:viewer>
+)
