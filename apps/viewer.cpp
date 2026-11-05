@@ -17,6 +17,10 @@
 #include "../libs/io/stl/stl_io.hpp"
 #include "../libs/vec3.hpp"
 
+#include "imgui.h"
+#include "imgui_impl_sdl3.h"
+#include "imgui_impl_sdlgpu3.h"
+
 struct Vertex {
   Vec3 position;
   Vec3 normal;
@@ -34,6 +38,7 @@ float g_y_rotation = 0;
 SDL_GPUTexture *g_depth_texture = nullptr;
 Uint32 g_swapchain_width = 0;
 Uint32 g_swapchain_height = 0;
+bool imgui_init = false;
 
 SDL_GPUShader *load_shader(SDL_GPUDevice *device,
                            const std::string &shader_filename,
@@ -245,12 +250,25 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
     return SDL_APP_FAILURE;
   }
 
-  g_window = SDL_CreateWindow("Viewer", 800, 600, SDL_WINDOW_RESIZABLE);
+  if (!SDL_Init(SDL_INIT_VIDEO)) {
+    SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Failed to init SDL: %s\n",
+                 SDL_GetError());
+    return SDL_APP_FAILURE;
+  }
+
+  float main_scale = SDL_GetDisplayContentScale(SDL_GetPrimaryDisplay());
+  SDL_WindowFlags window_flags =
+      SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIDDEN | SDL_WINDOW_HIGH_PIXEL_DENSITY;
+  g_window = SDL_CreateWindow("Viewer", (int)(800 * main_scale),
+                              (int)(600 * main_scale), window_flags);
   if (g_window == nullptr) {
     SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Failed to create window: %s",
                  SDL_GetError());
     return SDL_APP_FAILURE;
   }
+  SDL_SetWindowPosition(g_window, SDL_WINDOWPOS_CENTERED,
+                        SDL_WINDOWPOS_CENTERED);
+
   SDL_GPUShaderFormat shader_format_flags =
       SDL_GPU_SHADERFORMAT_SPIRV | SDL_GPU_SHADERFORMAT_MSL;
   g_device = SDL_CreateGPUDevice(shader_format_flags, true, nullptr);
@@ -264,6 +282,9 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
                  "Failed to claim window for GPU device: %s", SDL_GetError());
     return SDL_APP_FAILURE;
   }
+  SDL_SetGPUSwapchainParameters(g_device, g_window,
+                                SDL_GPU_SWAPCHAINCOMPOSITION_SDR,
+                                SDL_GPU_PRESENTMODE_VSYNC);
 
   if (!create_pipeline()) {
     return SDL_APP_FAILURE;
@@ -290,17 +311,51 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
     return SDL_APP_FAILURE;
   }
 
+  // Setup Dear ImGui context
+  IMGUI_CHECKVERSION();
+  ImGui::CreateContext();
+  ImGuiIO &io = ImGui::GetIO();
+  io.ConfigFlags |=
+      ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
+
+  // Setup Platform/Renderer backends
+  ImGui_ImplSDL3_InitForSDLGPU(g_window);
+  ImGui_ImplSDLGPU3_InitInfo init_info = {};
+  init_info.Device = g_device;
+  init_info.ColorTargetFormat =
+      SDL_GetGPUSwapchainTextureFormat(g_device, g_window);
+  init_info.MSAASamples =
+      SDL_GPU_SAMPLECOUNT_1; // Only used in multi-viewports mode.
+  init_info.SwapchainComposition =
+      SDL_GPU_SWAPCHAINCOMPOSITION_SDR; // Only used in multi-viewports mode.
+  init_info.PresentMode = SDL_GPU_PRESENTMODE_VSYNC;
+  ImGui_ImplSDLGPU3_Init(&init_info);
+
+  imgui_init = true;
+
+  SDL_ShowWindow(g_window);
+
   // Continue running the application
   return SDL_APP_CONTINUE;
 }
 
 // This function runs when a new event (mouse input, keypresses, etc) occurs
 SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
+  ImGuiIO &io = ImGui::GetIO();
+  ImGui_ImplSDL3_ProcessEvent(event);
   switch (event->type) {
   case SDL_EVENT_QUIT:
     // Quit the application with a success state
     return SDL_APP_SUCCESS;
+  case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
+    if (event->window.windowID == SDL_GetWindowID(g_window)) {
+      return SDL_APP_SUCCESS;
+    }
+    return SDL_APP_CONTINUE;
   case SDL_EVENT_KEY_DOWN:
+    if (io.WantCaptureKeyboard) {
+      return SDL_APP_CONTINUE;
+    }
     switch (event->key.key) {
     case SDLK_UP:
       g_x_rotation -= 5.0f;
@@ -324,6 +379,23 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
 
 // This function runs once per frame, and is the heart of the application
 SDL_AppResult SDL_AppIterate(void *appstate) {
+  if (SDL_GetWindowFlags(g_window) & SDL_WINDOW_MINIMIZED) {
+    SDL_Delay(10);
+    return SDL_APP_CONTINUE;
+  }
+  ImGui_ImplSDLGPU3_NewFrame();
+  ImGui_ImplSDL3_NewFrame();
+  ImGui::NewFrame();
+
+  {
+    ImGui::Begin("Commands");
+    if (ImGui::Button("TODO: Import mesh")) {
+    }
+    ImGui::End();
+  }
+
+  ImGui::Render();
+
   SDL_GPUCommandBuffer *command_buffer = SDL_AcquireGPUCommandBuffer(g_device);
   if (command_buffer == nullptr) {
     SDL_LogError(SDL_LOG_CATEGORY_ERROR,
@@ -343,6 +415,9 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
     SDL_CancelGPUCommandBuffer(command_buffer);
     return SDL_APP_CONTINUE;
   }
+  ImDrawData *draw_data = ImGui::GetDrawData();
+  ImGui_ImplSDLGPU3_PrepareDrawData(draw_data, command_buffer);
+
   if (g_swapchain_width != swapchain_width ||
       g_swapchain_height != swapchain_height) {
     if (g_depth_texture != nullptr) {
@@ -413,6 +488,8 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 
   SDL_DrawGPUPrimitives(render_pass, g_num_vertices, 1, 0, 0);
 
+  ImGui_ImplSDLGPU3_RenderDrawData(draw_data, command_buffer, render_pass);
+
   SDL_EndGPURenderPass(render_pass);
   SDL_SubmitGPUCommandBuffer(command_buffer);
 
@@ -421,6 +498,12 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 
 // This function runs once at shutdown
 void SDL_AppQuit(void *appstate, SDL_AppResult result) {
+  if (imgui_init) {
+    ImGui_ImplSDL3_Shutdown();
+    ImGui_ImplSDLGPU3_Shutdown();
+    ImGui::DestroyContext();
+  }
+
   if (g_device != nullptr) {
     if (g_depth_texture != nullptr) {
       SDL_ReleaseGPUTexture(g_device, g_depth_texture);

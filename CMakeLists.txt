@@ -17,8 +17,6 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(fmt)
 
-add_subdirectory(libs)
-
 set(SDL_SHARED OFF)
 set(SDL_STATIC ON)
 FetchContent_Declare(
@@ -39,8 +37,10 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(glm)
 
+add_subdirectory(libs)
+
 add_executable(viewer apps/viewer.cpp)
-target_link_libraries(viewer PUBLIC SDL3-static stl_io glm)
+target_link_libraries(viewer PUBLIC SDL3-static stl_io glm imgui)
 
 if(APPLE)
 	add_custom_command(
