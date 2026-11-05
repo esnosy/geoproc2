@@ -229,6 +229,12 @@ bool create_vertex_buffer(std::span<Vertex> vertices) {
 }
 
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
+  if (argc != 2) {
+    SDL_LogError(SDL_LOG_CATEGORY_ERROR,
+                 "Expected arguments: path_to_stl_file");
+    return SDL_APP_FAILURE;
+  }
+
   g_window = SDL_CreateWindow("Viewer", 800, 600, SDL_WINDOW_RESIZABLE);
   if (g_window == nullptr) {
     SDL_Log("Failed to create window: %s", SDL_GetError());
@@ -250,7 +256,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
     return SDL_APP_FAILURE;
   }
 
-  const char *filepath = "monkey.stl";
+  const char *filepath = argv[1];
 
   auto tris = read_stl(filepath);
 
