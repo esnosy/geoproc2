@@ -44,8 +44,9 @@ SDL_GPUShader *load_shader(SDL_GPUDevice *device,
   } else if (shader_filename.contains(".frag")) {
     stage = SDL_GPU_SHADERSTAGE_FRAGMENT;
   } else {
-    SDL_Log("Failed to deduce shader stage from filename: %s",
-            shader_filename.c_str());
+    SDL_LogError(SDL_LOG_CATEGORY_ERROR,
+                 "Failed to deduce shader stage from filename: %s",
+                 shader_filename.c_str());
     return nullptr;
   }
   std::filesystem::path full_path = std::filesystem::path(SDL_GetBasePath());
@@ -61,14 +62,16 @@ SDL_GPUShader *load_shader(SDL_GPUDevice *device,
     format = SDL_GPU_SHADERFORMAT_MSL;
     entrypoint = "main0";
   } else {
-    SDL_Log("Failed to find supported shader format for backend %s",
-            SDL_GetGPUDeviceDriver(device));
+    SDL_LogError(SDL_LOG_CATEGORY_ERROR,
+                 "Failed to find supported shader format for backend %s",
+                 SDL_GetGPUDeviceDriver(device));
     return nullptr;
   }
   size_t file_size;
   void *code = SDL_LoadFile(full_path.string().c_str(), &file_size);
   if (code == nullptr) {
-    SDL_Log("Failed to load shader file from disk: %s", SDL_GetError());
+    SDL_LogError(SDL_LOG_CATEGORY_ERROR,
+                 "Failed to load shader file from disk: %s", SDL_GetError());
     return nullptr;
   }
   SDL_GPUShaderCreateInfo shader_info = SDL_GPUShaderCreateInfo{
@@ -81,8 +84,9 @@ SDL_GPUShader *load_shader(SDL_GPUDevice *device,
   };
   SDL_GPUShader *shader = SDL_CreateGPUShader(device, &shader_info);
   if (shader == nullptr) {
-    SDL_Log("Failed to create shader from file %s: %s", full_path.c_str(),
-            SDL_GetError());
+    SDL_LogError(SDL_LOG_CATEGORY_ERROR,
+                 "Failed to create shader from file %s: %s", full_path.c_str(),
+                 SDL_GetError());
     SDL_free(code);
     return nullptr;
   }
@@ -92,13 +96,13 @@ SDL_GPUShader *load_shader(SDL_GPUDevice *device,
 bool create_pipeline() {
   g_vertex_shader = load_shader(g_device, "shader.vert", 1);
   if (g_vertex_shader == nullptr) {
-    SDL_Log("Failed to create vertex shader!");
+    SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Failed to create vertex shader!");
     return false;
   }
 
   g_fragment_shader = load_shader(g_device, "shader.frag", 0);
   if (g_fragment_shader == nullptr) {
-    SDL_Log("Failed to create fragment shader!");
+    SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Failed to create fragment shader!");
     return false;
   }
   std::array vertex_buffer_descriptions{
@@ -161,7 +165,8 @@ bool create_pipeline() {
   };
   g_pipeline = SDL_CreateGPUGraphicsPipeline(g_device, &pipeline_create_info);
   if (g_pipeline == nullptr) {
-    SDL_Log("Failed to create graphics pipeline: %s", SDL_GetError());
+    SDL_LogError(SDL_LOG_CATEGORY_ERROR,
+                 "Failed to create graphics pipeline: %s", SDL_GetError());
     return false;
   }
   SDL_ReleaseGPUShader(g_device, g_vertex_shader);
@@ -178,7 +183,8 @@ bool create_vertex_buffer(std::span<Vertex> vertices) {
   };
   g_vertex_buffer = SDL_CreateGPUBuffer(g_device, &vertexBufferCreateInfo);
   if (g_vertex_buffer == nullptr) {
-    SDL_Log("Failed to create vertex buffer: %s", SDL_GetError());
+    SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Failed to create vertex buffer: %s",
+                 SDL_GetError());
     return false;
   }
   SDL_GPUTransferBufferCreateInfo transfer_buffer_create_info =
@@ -189,13 +195,15 @@ bool create_vertex_buffer(std::span<Vertex> vertices) {
   SDL_GPUTransferBuffer *transfer_buffer =
       SDL_CreateGPUTransferBuffer(g_device, &transfer_buffer_create_info);
   if (transfer_buffer == nullptr) {
-    SDL_Log("Failed to create transfer buffer: %s", SDL_GetError());
+    SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Failed to create transfer buffer: %s",
+                 SDL_GetError());
     return false;
   }
   Vertex *transfer_data = static_cast<Vertex *>(
       SDL_MapGPUTransferBuffer(g_device, transfer_buffer, false));
   if (transfer_data == nullptr) {
-    SDL_Log("Failed to map transfer buffer: %s", SDL_GetError());
+    SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Failed to map transfer buffer: %s",
+                 SDL_GetError());
     SDL_ReleaseGPUTransferBuffer(g_device, transfer_buffer);
     return false;
   }
@@ -205,7 +213,8 @@ bool create_vertex_buffer(std::span<Vertex> vertices) {
   SDL_GPUCommandBuffer *upload_command_buffer =
       SDL_AcquireGPUCommandBuffer(g_device);
   if (upload_command_buffer == nullptr) {
-    SDL_Log("Failed to acquire GPU command buffer: %s", SDL_GetError());
+    SDL_LogError(SDL_LOG_CATEGORY_ERROR,
+                 "Failed to acquire GPU command buffer: %s", SDL_GetError());
     return false;
   }
   SDL_GPUCopyPass *copy_pass = SDL_BeginGPUCopyPass(upload_command_buffer);
@@ -221,7 +230,8 @@ bool create_vertex_buffer(std::span<Vertex> vertices) {
   SDL_UploadToGPUBuffer(copy_pass, &buffer_location, &buffer_region, false);
   SDL_EndGPUCopyPass(copy_pass);
   if (!SDL_SubmitGPUCommandBuffer(upload_command_buffer)) {
-    SDL_Log("Failed to submit GPU command buffer: %s", SDL_GetError());
+    SDL_LogError(SDL_LOG_CATEGORY_ERROR,
+                 "Failed to submit GPU command buffer: %s", SDL_GetError());
     return false;
   }
   SDL_ReleaseGPUTransferBuffer(g_device, transfer_buffer);
@@ -237,18 +247,21 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
 
   g_window = SDL_CreateWindow("Viewer", 800, 600, SDL_WINDOW_RESIZABLE);
   if (g_window == nullptr) {
-    SDL_Log("Failed to create window: %s", SDL_GetError());
+    SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Failed to create window: %s",
+                 SDL_GetError());
     return SDL_APP_FAILURE;
   }
   SDL_GPUShaderFormat shader_format_flags =
       SDL_GPU_SHADERFORMAT_SPIRV | SDL_GPU_SHADERFORMAT_MSL;
   g_device = SDL_CreateGPUDevice(shader_format_flags, true, nullptr);
   if (g_device == nullptr) {
-    SDL_Log("Failed to create GPU device: %s", SDL_GetError());
+    SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Failed to create GPU device: %s",
+                 SDL_GetError());
     return SDL_APP_FAILURE;
   }
   if (!SDL_ClaimWindowForGPUDevice(g_device, g_window)) {
-    SDL_Log("Failed to claim window for GPU device: %s", SDL_GetError());
+    SDL_LogError(SDL_LOG_CATEGORY_ERROR,
+                 "Failed to claim window for GPU device: %s", SDL_GetError());
     return SDL_APP_FAILURE;
   }
 
@@ -273,7 +286,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
   }
 
   if (!create_vertex_buffer(vertices)) {
-    SDL_Log("Failed to create vertex buffer!");
+    SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Failed to create vertex buffer!");
     return SDL_APP_FAILURE;
   }
 
@@ -313,7 +326,8 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
 SDL_AppResult SDL_AppIterate(void *appstate) {
   SDL_GPUCommandBuffer *command_buffer = SDL_AcquireGPUCommandBuffer(g_device);
   if (command_buffer == nullptr) {
-    SDL_Log("Failed to acquire GPU command buffer: %s", SDL_GetError());
+    SDL_LogError(SDL_LOG_CATEGORY_ERROR,
+                 "Failed to acquire GPU command buffer: %s", SDL_GetError());
     return SDL_APP_FAILURE;
   }
   Uint32 swapchain_width, swapchain_height;
@@ -321,7 +335,8 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
   if (!SDL_WaitAndAcquireGPUSwapchainTexture(
           command_buffer, g_window, &swapchain_texture, &swapchain_width,
           &swapchain_height)) {
-    SDL_Log("Failed to acquire swapchain texture: %s", SDL_GetError());
+    SDL_LogError(SDL_LOG_CATEGORY_ERROR,
+                 "Failed to acquire swapchain texture: %s", SDL_GetError());
     return SDL_APP_FAILURE;
   }
   if (swapchain_texture == nullptr) {
@@ -348,8 +363,9 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 
     g_depth_texture = SDL_CreateGPUTexture(g_device, &depth_info);
     if (g_depth_texture == nullptr) {
-      SDL_Log("Failed to create depth texture with new size (%d x %d): %s",
-              swapchain_width, swapchain_height, SDL_GetError());
+      SDL_LogError(SDL_LOG_CATEGORY_ERROR,
+                   "Failed to create depth texture with new size (%d x %d): %s",
+                   swapchain_width, swapchain_height, SDL_GetError());
       return SDL_APP_FAILURE;
     }
   }
