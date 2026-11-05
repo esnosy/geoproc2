@@ -3,4 +3,5 @@ build/
 *.ply
 *.stl
 *.obj
-.vscode
+.vscode/
+imgui.ini
