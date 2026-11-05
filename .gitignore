@@ -3,3 +3,4 @@ build/
 *.ply
 *.stl
 *.obj
+.vscode
