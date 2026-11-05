@@ -39,6 +39,11 @@ SDL_GPUTexture *g_depth_texture = nullptr;
 Uint32 g_swapchain_width = 0;
 Uint32 g_swapchain_height = 0;
 bool imgui_init = false;
+char *g_model_path = nullptr;
+bool g_model_load_requested = false;
+
+static const SDL_DialogFileFilter import_mesh_file_dialog_filters[] = {
+    {"STL", "stl"}, {"All files", "*"}};
 
 SDL_GPUShader *load_shader(SDL_GPUDevice *device,
                            const std::string &shader_filename,
@@ -243,13 +248,43 @@ bool create_vertex_buffer(std::span<Vertex> vertices) {
   return true;
 }
 
-SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
-  if (argc != 2) {
-    SDL_LogError(SDL_LOG_CATEGORY_ERROR,
-                 "Expected arguments: path_to_stl_file");
-    return SDL_APP_FAILURE;
+static void SDLCALL import_mesh_file_dialog_callback(
+    void *userdata, const char *const *filelist, int filter) {
+  if (!filelist) {
+    SDL_Log("An error occured: %s", SDL_GetError());
+    return;
+  } else if (!*filelist) {
+    SDL_Log("The user did not select any file.");
+    SDL_Log("Most likely, the dialog was canceled.");
+    return;
   }
 
+  while (*filelist) {
+    SDL_Log("Full path to selected file: '%s'", *filelist);
+
+    auto l = SDL_strlen(*filelist) + 1;
+    if (g_model_path != nullptr) {
+      SDL_free(g_model_path);
+    }
+    g_model_path = (char *)SDL_malloc(l);
+    SDL_memcpy(g_model_path, *filelist, l);
+    g_model_load_requested = true;
+
+    filelist++;
+  }
+
+  if (filter < 0) {
+    SDL_Log("The current platform does not support fetching "
+            "the selected filter, or the user did not select"
+            " any filter.");
+  } else if (filter < SDL_arraysize(import_mesh_file_dialog_filters)) {
+    SDL_Log("The filter selected by the user is '%s' (%s).",
+            import_mesh_file_dialog_filters[filter].pattern,
+            import_mesh_file_dialog_filters[filter].name);
+  }
+}
+
+SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
   if (!SDL_Init(SDL_INIT_VIDEO)) {
     SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Failed to init SDL: %s\n",
                  SDL_GetError());
@@ -287,27 +322,6 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
                                 SDL_GPU_PRESENTMODE_VSYNC);
 
   if (!create_pipeline()) {
-    return SDL_APP_FAILURE;
-  }
-
-  const char *filepath = argv[1];
-
-  auto tris = read_stl(filepath);
-
-  std::vector<Vertex> vertices;
-  vertices.reserve(tris.size() * 3);
-  for (const auto &t : tris) {
-    auto ab = t.b - t.a;
-    auto ac = t.c - t.a;
-    auto normal = ab.cross(ac);
-    normal.normalize();
-    vertices.push_back({t.a, normal});
-    vertices.push_back({t.b, normal});
-    vertices.push_back({t.c, normal});
-  }
-
-  if (!create_vertex_buffer(vertices)) {
-    SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Failed to create vertex buffer!");
     return SDL_APP_FAILURE;
   }
 
@@ -389,12 +403,42 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 
   {
     ImGui::Begin("Commands");
-    if (ImGui::Button("TODO: Import mesh")) {
+    if (ImGui::Button("Import mesh")) {
+      SDL_ShowOpenFileDialog(import_mesh_file_dialog_callback, nullptr,
+                             g_window, import_mesh_file_dialog_filters,
+                             SDL_arraysize(import_mesh_file_dialog_filters),
+                             nullptr, false);
     }
     ImGui::End();
   }
 
   ImGui::Render();
+
+  if (g_model_load_requested) {
+    g_model_load_requested = false;
+    if (g_vertex_buffer != nullptr) {
+      SDL_ReleaseGPUBuffer(g_device, g_vertex_buffer);
+    }
+
+    auto tris = read_stl(g_model_path);
+
+    std::vector<Vertex> vertices;
+    vertices.reserve(tris.size() * 3);
+    for (const auto &t : tris) {
+      auto ab = t.b - t.a;
+      auto ac = t.c - t.a;
+      auto normal = ab.cross(ac);
+      normal.normalize();
+      vertices.push_back({t.a, normal});
+      vertices.push_back({t.b, normal});
+      vertices.push_back({t.c, normal});
+    }
+
+    if (!create_vertex_buffer(vertices)) {
+      SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Failed to create vertex buffer!");
+      return SDL_APP_FAILURE;
+    }
+  }
 
   SDL_GPUCommandBuffer *command_buffer = SDL_AcquireGPUCommandBuffer(g_device);
   if (command_buffer == nullptr) {
@@ -461,32 +505,34 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
       command_buffer, &color_target_info, 1, &depth_target_info);
 
   SDL_BindGPUGraphicsPipeline(render_pass, g_pipeline);
-  std::array vertex_buffers{
-      SDL_GPUBufferBinding{
-          .buffer = g_vertex_buffer,
-          .offset = 0,
-      },
-  };
-  SDL_BindGPUVertexBuffers(render_pass, 0, vertex_buffers.data(),
-                           vertex_buffers.size());
+  if (g_vertex_buffer != nullptr) {
+    std::array vertex_buffers{
+        SDL_GPUBufferBinding{
+            .buffer = g_vertex_buffer,
+            .offset = 0,
+        },
+    };
+    SDL_BindGPUVertexBuffers(render_pass, 0, vertex_buffers.data(),
+                             vertex_buffers.size());
 
-  glm::mat4 projection = glm::perspective(
-      glm::radians(45.0f), (float)swapchain_width / (float)swapchain_height,
-      0.1f, 100.0f);
-  glm::mat4 view =
-      glm::lookAt(glm::vec3(0.0f, 0.0f, 3.0f), glm::vec3(0.0f, 0.0f, 0.0f),
-                  glm::vec3(0.0f, 1.0f, 0.0f));
-  glm::mat4 model(1.0f);
-  model = glm::rotate(model, glm::radians(g_x_rotation),
-                      glm::vec3(1.0f, 0.0f, 0.0f));
-  model = glm::rotate(model, glm::radians(g_y_rotation),
-                      glm::vec3(0.0f, 1.0f, 0.0f));
-  glm::mat4 mvp = projection * view * model;
+    glm::mat4 projection = glm::perspective(
+        glm::radians(45.0f), (float)swapchain_width / (float)swapchain_height,
+        0.1f, 100.0f);
+    glm::mat4 view =
+        glm::lookAt(glm::vec3(0.0f, 0.0f, 3.0f), glm::vec3(0.0f, 0.0f, 0.0f),
+                    glm::vec3(0.0f, 1.0f, 0.0f));
+    glm::mat4 model(1.0f);
+    model = glm::rotate(model, glm::radians(g_x_rotation),
+                        glm::vec3(1.0f, 0.0f, 0.0f));
+    model = glm::rotate(model, glm::radians(g_y_rotation),
+                        glm::vec3(0.0f, 1.0f, 0.0f));
+    glm::mat4 mvp = projection * view * model;
 
-  SDL_PushGPUVertexUniformData(command_buffer, 0, glm::value_ptr(mvp),
-                               sizeof(mvp));
+    SDL_PushGPUVertexUniformData(command_buffer, 0, glm::value_ptr(mvp),
+                                 sizeof(mvp));
 
-  SDL_DrawGPUPrimitives(render_pass, g_num_vertices, 1, 0, 0);
+    SDL_DrawGPUPrimitives(render_pass, g_num_vertices, 1, 0, 0);
+  }
 
   ImGui_ImplSDLGPU3_RenderDrawData(draw_data, command_buffer, render_pass);
 
@@ -521,5 +567,9 @@ void SDL_AppQuit(void *appstate, SDL_AppResult result) {
   }
   if (g_window != nullptr) {
     SDL_DestroyWindow(g_window);
+  }
+
+  if (g_model_path != nullptr) {
+    SDL_free(g_model_path);
   }
 }
