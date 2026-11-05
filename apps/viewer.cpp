@@ -38,7 +38,7 @@ float g_y_rotation = 0;
 SDL_GPUTexture *g_depth_texture = nullptr;
 Uint32 g_swapchain_width = 0;
 Uint32 g_swapchain_height = 0;
-bool imgui_init = false;
+bool g_imgui_init = false;
 char *g_model_path = nullptr;
 bool g_model_load_requested = false;
 
@@ -187,11 +187,11 @@ bool create_pipeline() {
 bool create_vertex_buffer(std::span<Vertex> vertices) {
   g_num_vertices = vertices.size();
   Uint32 vertices_size = g_num_vertices * sizeof(Vertex);
-  SDL_GPUBufferCreateInfo vertexBufferCreateInfo = SDL_GPUBufferCreateInfo{
+  SDL_GPUBufferCreateInfo vertex_buffer_create_info = SDL_GPUBufferCreateInfo{
       .usage = SDL_GPU_BUFFERUSAGE_VERTEX,
       .size = vertices_size,
   };
-  g_vertex_buffer = SDL_CreateGPUBuffer(g_device, &vertexBufferCreateInfo);
+  g_vertex_buffer = SDL_CreateGPUBuffer(g_device, &vertex_buffer_create_info);
   if (g_vertex_buffer == nullptr) {
     SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Failed to create vertex buffer: %s",
                  SDL_GetError());
@@ -345,7 +345,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
   init_info.PresentMode = SDL_GPU_PRESENTMODE_VSYNC;
   ImGui_ImplSDLGPU3_Init(&init_info);
 
-  imgui_init = true;
+  g_imgui_init = true;
 
   SDL_ShowWindow(g_window);
 
@@ -544,7 +544,7 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 
 // This function runs once at shutdown
 void SDL_AppQuit(void *appstate, SDL_AppResult result) {
-  if (imgui_init) {
+  if (g_imgui_init) {
     ImGui_ImplSDL3_Shutdown();
     ImGui_ImplSDLGPU3_Shutdown();
     ImGui::DestroyContext();
