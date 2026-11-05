@@ -399,10 +399,22 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 
 // This function runs once at shutdown
 void SDL_AppQuit(void *appstate, SDL_AppResult result) {
-  SDL_ReleaseGPUTexture(g_device, g_depth_texture);
-  SDL_ReleaseWindowFromGPUDevice(g_device, g_window);
-  SDL_ReleaseGPUGraphicsPipeline(g_device, g_pipeline);
-  SDL_ReleaseGPUBuffer(g_device, g_vertex_buffer);
-  SDL_DestroyGPUDevice(g_device);
-  SDL_DestroyWindow(g_window);
+  if (g_device != nullptr) {
+    if (g_depth_texture != nullptr) {
+      SDL_ReleaseGPUTexture(g_device, g_depth_texture);
+    }
+    if (g_window != nullptr) {
+      SDL_ReleaseWindowFromGPUDevice(g_device, g_window);
+    }
+    if (g_pipeline != nullptr) {
+      SDL_ReleaseGPUGraphicsPipeline(g_device, g_pipeline);
+    }
+    if (g_vertex_buffer != nullptr) {
+      SDL_ReleaseGPUBuffer(g_device, g_vertex_buffer);
+    }
+    SDL_DestroyGPUDevice(g_device);
+  }
+  if (g_window != nullptr) {
+    SDL_DestroyWindow(g_window);
+  }
 }
