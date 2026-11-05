@@ -534,9 +534,18 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
     SDL_DrawGPUPrimitives(render_pass, g_num_vertices, 1, 0, 0);
   }
 
-  ImGui_ImplSDLGPU3_RenderDrawData(draw_data, command_buffer, render_pass);
-
   SDL_EndGPURenderPass(render_pass);
+
+  SDL_GPUColorTargetInfo imgui_color_target_info = {0};
+  imgui_color_target_info.texture = swapchain_texture;
+  imgui_color_target_info.load_op = SDL_GPU_LOADOP_LOAD;
+  imgui_color_target_info.store_op = SDL_GPU_STOREOP_STORE;
+
+  SDL_GPURenderPass *imgui_render_pass = SDL_BeginGPURenderPass(
+      command_buffer, &imgui_color_target_info, 1, nullptr);
+  ImGui_ImplSDLGPU3_RenderDrawData(draw_data, command_buffer,
+                                   imgui_render_pass);
+  SDL_EndGPURenderPass(imgui_render_pass);
   SDL_SubmitGPUCommandBuffer(command_buffer);
 
   return SDL_APP_CONTINUE;
