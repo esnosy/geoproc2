@@ -4,12 +4,12 @@
 
 #include "../../fast_float.h"
 #include <fmt/os.h>
+#include <glm/glm.hpp>
 
-#include "../../mat3x3.hpp"
 #include "obj_io.hpp"
 
-Mat3x3 import_mat = {{{1, 0, 0}, {0, 0, -1}, {0, 1, 0}}};
-Mat3x3 export_mat = import_mat.transposed();
+glm::mat3 export_mat = {{1, 0, 0}, {0, 0, -1}, {0, 1, 0}};
+glm::mat3 import_mat = glm::transpose(export_mat);
 
 std::vector<Indexed_Mesh> read_obj(const char *filepath) {
   std::vector<Indexed_Mesh> meshes;
@@ -30,7 +30,7 @@ std::vector<Indexed_Mesh> read_obj(const char *filepath) {
         meshes.push_back(Indexed_Mesh());
       }
       current_vertex_index++;
-      Vec3 vertex;
+      glm::vec3 vertex;
       line_ss >> token;
       fast_float::from_chars(token.data(), token.data() + token.size(),
                              vertex.x);
@@ -62,7 +62,7 @@ void write_obj(const std::vector<Indexed_Mesh> &meshes, const char *filepath) {
   for (const auto &m : meshes) {
     out.print("o mesh_{}\n", object_index);
     object_index++;
-    for (Vec3 v : m.vertices) {
+    for (glm::vec3 v : m.vertices) {
       v = export_mat * v;
       out.print("v {} {} {}\n", v.x, v.y, v.z);
     }

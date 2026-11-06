@@ -46,7 +46,7 @@ Indexed_Mesh read_off(const char *filepath) {
   result.faces.reserve(num_faces);
 
   for (size_t i = 0; i < num_vertices; i++) {
-    Vec3 v;
+    glm::vec3 v;
     file_buf.skip_spaces();
     file_buf.parse_token_as_number(v.x);
 

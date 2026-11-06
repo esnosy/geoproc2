@@ -15,15 +15,14 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "../libs/io/stl/stl_io.hpp"
-#include "../libs/vec3.hpp"
 
 #include "imgui.h"
 #include "imgui_impl_sdl3.h"
 #include "imgui_impl_sdlgpu3.h"
 
 struct Vertex {
-  Vec3 position;
-  Vec3 normal;
+  glm::vec3 position;
+  glm::vec3 normal;
 };
 
 struct Vertex_UBO {
@@ -149,7 +148,7 @@ bool create_pipeline() {
           .location = 1,
           .buffer_slot = 0,
           .format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3,
-          .offset = sizeof(Vec3),
+          .offset = sizeof(glm::vec3),
       },
   };
   std::array color_target_descriptions{SDL_GPUColorTargetDescription{
@@ -442,13 +441,12 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
     std::vector<Vertex> vertices;
     vertices.reserve(tris.size() * 3);
     for (const auto &t : tris) {
-      auto ab = t.b - t.a;
-      auto ac = t.c - t.a;
-      auto normal = ab.cross(ac);
-      normal.normalize();
-      vertices.push_back({t.a, normal});
-      vertices.push_back({t.b, normal});
-      vertices.push_back({t.c, normal});
+      auto ab = t[1] - t[0];
+      auto ac = t[2] - t[0];
+      auto normal = glm::normalize(glm::cross(ab, ac));
+      vertices.push_back({t[0], normal});
+      vertices.push_back({t[1], normal});
+      vertices.push_back({t[2], normal});
     }
 
     if (!create_vertex_buffer(vertices)) {

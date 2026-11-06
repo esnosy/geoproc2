@@ -120,7 +120,8 @@ Indexed_Mesh read_ply(const char *filepath) {
       }
       ifs >> p.name;
       if (elements.empty()) {
-        constexpr const char *err = "PLY IO ERROR: Expected element before props";
+        constexpr const char *err =
+            "PLY IO ERROR: Expected element before props";
         std::cerr << err << std::endl;
         throw std::runtime_error(err);
       }
@@ -245,7 +246,7 @@ void write_ply_binary(const Indexed_Mesh &mesh, const char *filepath) {
          "property list uchar uint vertex_indices\n"
          "end_header\n";
   ofs.write(reinterpret_cast<const char *>(mesh.vertices.data()),
-            mesh.vertices.size() * sizeof Vec3);
+            mesh.vertices.size() * sizeof(glm::vec3));
   for (const auto &f : mesh.faces) {
     uint8_t num_verts = (uint8_t)f.size();
     ofs.write(reinterpret_cast<char *>(&num_verts), sizeof uint8_t);
