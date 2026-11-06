@@ -55,6 +55,7 @@ Uint32 g_swapchain_height = 0;
 bool g_imgui_init = false;
 char *g_model_path = nullptr;
 bool g_model_load_requested = false;
+float g_camera_z = 3.0f;
 
 static const SDL_DialogFileFilter import_mesh_file_dialog_filters[] = {
     {"STL", "stl"}, {"All files", "*"}};
@@ -395,6 +396,12 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
     case SDLK_RIGHT:
       g_y_rotation += 5.0f;
       break;
+    case SDLK_W:
+      g_camera_z -= 1.0f;
+      break;
+    case SDLK_S:
+      g_camera_z += 1.0f;
+      break;
     }
     return SDL_APP_CONTINUE;
   default:
@@ -533,10 +540,10 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 
     glm::mat4 projection = glm::perspective(
         glm::radians(45.0f), (float)swapchain_width / (float)swapchain_height,
-        0.1f, 100.0f);
+        0.1f, 1000000.0f);
     glm::mat4 view =
-        glm::lookAt(glm::vec3(0.0f, 0.0f, 3.0f), glm::vec3(0.0f, 0.0f, 0.0f),
-                    glm::vec3(0.0f, 1.0f, 0.0f));
+        glm::lookAt(glm::vec3(0.0f, 0.0f, g_camera_z),
+                    glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
     glm::mat4 model(1.0f);
     model = glm::rotate(model, glm::radians(g_x_rotation),
                         glm::vec3(1.0f, 0.0f, 0.0f));
