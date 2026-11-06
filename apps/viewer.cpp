@@ -52,7 +52,7 @@ SDL_GPUTexture *g_depth_texture = nullptr;
 Uint32 g_swapchain_width = 0;
 Uint32 g_swapchain_height = 0;
 bool g_imgui_init = false;
-char *g_model_path = nullptr;
+std::string g_model_path;
 bool g_model_load_requested = false;
 float g_camera_z = 3.0f;
 
@@ -276,12 +276,7 @@ static void SDLCALL import_mesh_file_dialog_callback(
   while (*filelist) {
     SDL_Log("Full path to selected file: '%s'", *filelist);
 
-    auto l = SDL_strlen(*filelist) + 1;
-    if (g_model_path != nullptr) {
-      SDL_free(g_model_path);
-    }
-    g_model_path = (char *)SDL_malloc(l);
-    SDL_memcpy(g_model_path, *filelist, l);
+    g_model_path = std::string(*filelist);
     g_model_load_requested = true;
 
     filelist++;
@@ -436,7 +431,7 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
       SDL_ReleaseGPUBuffer(g_device, g_vertex_buffer);
     }
 
-    auto tris = read_stl(g_model_path);
+    auto tris = read_stl(g_model_path.c_str());
 
     std::vector<Vertex> vertices;
     vertices.reserve(tris.size() * 3);
@@ -609,9 +604,5 @@ void SDL_AppQuit(void *appstate, SDL_AppResult result) {
   }
   if (g_window != nullptr) {
     SDL_DestroyWindow(g_window);
-  }
-
-  if (g_model_path != nullptr) {
-    SDL_free(g_model_path);
   }
 }
