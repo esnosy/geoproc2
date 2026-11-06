@@ -26,6 +26,20 @@ struct Vertex {
   Vec3 normal;
 };
 
+struct Vertex_UBO {
+  glm::mat4 model;
+  glm::mat4 view;
+  glm::mat4 projection;
+  glm::mat4 model_normal;
+};
+
+struct Fragment_UBO {
+  glm::vec4 light_pos;
+  glm::vec4 light_color;
+  glm::vec4 object_color;
+  glm::vec4 ambient;
+};
+
 SDL_Window *g_window = nullptr;
 SDL_GPUDevice *g_device = nullptr;
 SDL_GPUGraphicsPipeline *g_pipeline = nullptr;
@@ -110,7 +124,7 @@ bool create_pipeline() {
     return false;
   }
 
-  g_fragment_shader = load_shader(g_device, "shader.frag", 0);
+  g_fragment_shader = load_shader(g_device, "shader.frag", 1);
   if (g_fragment_shader == nullptr) {
     SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Failed to create fragment shader!");
     return false;
@@ -528,10 +542,23 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
                         glm::vec3(1.0f, 0.0f, 0.0f));
     model = glm::rotate(model, glm::radians(g_y_rotation),
                         glm::vec3(0.0f, 1.0f, 0.0f));
-    glm::mat4 mvp = projection * view * model;
+    Vertex_UBO vertex_ubo;
+    vertex_ubo.model = model;
+    vertex_ubo.view = view;
+    vertex_ubo.projection = projection;
+    vertex_ubo.model_normal = glm::transpose(glm::inverse(model));
 
-    SDL_PushGPUVertexUniformData(command_buffer, 0, glm::value_ptr(mvp),
-                                 sizeof(mvp));
+    SDL_PushGPUVertexUniformData(command_buffer, 0, &vertex_ubo,
+                                 sizeof(vertex_ubo));
+
+    Fragment_UBO fragment_ubo;
+    fragment_ubo.light_pos = glm::vec4(0.0f, 0.0f, 3.0f, 1.0f);
+    fragment_ubo.light_color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+    fragment_ubo.object_color = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
+    fragment_ubo.ambient = glm::vec4(0.1f, 0.0f, 0.0f, 1.0f);
+
+    SDL_PushGPUFragmentUniformData(command_buffer, 0, &fragment_ubo,
+                                   sizeof(fragment_ubo));
 
     SDL_DrawGPUPrimitives(render_pass, g_num_vertices, 1, 0, 0);
   }
