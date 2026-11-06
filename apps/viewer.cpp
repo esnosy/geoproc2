@@ -349,11 +349,9 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
 
   SDL_ShowWindow(g_window);
 
-  // Continue running the application
   return SDL_APP_CONTINUE;
 }
 
-// This function runs when a new event (mouse input, keypresses, etc) occurs
 SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
   ImGuiIO &io = ImGui::GetIO();
   ImGui_ImplSDL3_ProcessEvent(event);
@@ -386,12 +384,10 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
     }
     return SDL_APP_CONTINUE;
   default:
-    // Continue running the application
     return SDL_APP_CONTINUE;
   }
 }
 
-// This function runs once per frame, and is the heart of the application
 SDL_AppResult SDL_AppIterate(void *appstate) {
   if (SDL_GetWindowFlags(g_window) & SDL_WINDOW_MINIMIZED) {
     SDL_Delay(10);
@@ -551,7 +547,6 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
   return SDL_APP_CONTINUE;
 }
 
-// This function runs once at shutdown
 void SDL_AppQuit(void *appstate, SDL_AppResult result) {
   if (g_imgui_init) {
     ImGui_ImplSDL3_Shutdown();
