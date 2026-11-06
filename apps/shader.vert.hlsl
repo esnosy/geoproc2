@@ -1,6 +1,6 @@
 cbuffer UBO : register(b0, space1)
 {
-    float4x4 mvp : packoffset(c0);
+    float4x4 mvp;
 };
 
 struct Input
