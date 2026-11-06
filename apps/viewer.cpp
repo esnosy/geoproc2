@@ -456,6 +456,12 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
     return SDL_APP_CONTINUE;
   }
   ImDrawData *draw_data = ImGui::GetDrawData();
+  const bool is_minimized =
+      (draw_data->DisplaySize.x <= 0.0f || draw_data->DisplaySize.y <= 0.0f);
+  if (is_minimized) {
+    SDL_CancelGPUCommandBuffer(command_buffer);
+    return SDL_APP_CONTINUE;
+  }
   ImGui_ImplSDLGPU3_PrepareDrawData(draw_data, command_buffer);
 
   if (g_swapchain_width != swapchain_width ||
