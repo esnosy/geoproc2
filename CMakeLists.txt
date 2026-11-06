@@ -61,10 +61,3 @@ else()
 			$<TARGET_FILE_DIR:viewer>/shader.frag.spv
 	)
 endif()
-
-add_custom_command(
-	TARGET viewer
-	POST_BUILD
-	COMMAND ${CMAKE_COMMAND} -E copy_if_different
-		${CMAKE_CURRENT_SOURCE_DIR}/monkey.stl $<TARGET_FILE_DIR:viewer>
-)
