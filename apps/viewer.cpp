@@ -552,7 +552,7 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
                                  sizeof(vertex_ubo));
 
     Fragment_UBO fragment_ubo;
-    fragment_ubo.light_pos = glm::vec4(0.0f, 0.0f, 3.0f, 1.0f);
+    fragment_ubo.light_pos = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
     fragment_ubo.light_color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
     fragment_ubo.object_color = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
     fragment_ubo.ambient = glm::vec4(0.1f, 0.0f, 0.0f, 1.0f);
